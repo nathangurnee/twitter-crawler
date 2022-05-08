@@ -4,9 +4,6 @@ import base64
 import os
 import sys
 
-class ScrapeWebsite(object):
-      pass
-
 class TweetApiRetriever(object):
   def __init__(self, consumerToken, consumerSecret):
     # set the consumer token and secret
@@ -22,6 +19,9 @@ class TweetApiRetriever(object):
 
     # combined tweet file sizes are 2 GB
     self.totalTweetFileSize = 21474836480
+
+    # ids of the tweets
+    self.visitedTweetIds = set()
 
   # encode the consumer token and secret in base64 format
   def createEncodedTokenSecret(self):
@@ -85,6 +85,13 @@ class TweetApiRetriever(object):
           continue
 
         tweet = json.loads(tweetInfo)
+
+        # check if we already have saved this tweet and if we have, skip it
+        if tweet['data']['id'] in self.visitedTweetIds:
+          continue
+
+        # mark the current tweet as visited
+        self.visitedTweetIds.add(tweet['data']['id'])
 
         # check if the file is too large, if so close the file and create a new one
         if os.path.getsize(tweetFileName) > self.maxTweetFileSize:
