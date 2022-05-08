@@ -5,7 +5,7 @@ import os
 import sys
 
 class ScrapeWebsite(object):
-  pass
+      pass
 
 class TweetApiRetriever(object):
   def __init__(self, consumerToken, consumerSecret):
@@ -80,13 +80,23 @@ class TweetApiRetriever(object):
 
       # iterate through the tweets and write them to a file
       for tweetInfo in tweetsResponse.iter_lines():
+        # Twitter will send a keep-alive ping every 10 seconds, so we will just ignore it
+        if tweetInfo == b'':
+          print('Keep-alive ping received...\n')
+          continue
+
         tweet = json.loads(tweetInfo)
         # check if the file is too large, if so close the file and create a new one
+
+        #if os.path.getsize(tweetFileName) > self.maxTweetFileSize:
+        #  print(json.dumps(tweet, separators=(',', ':'), indent=2))
+        #  tweetFile.write(json.dumps(tweet, separators=(',', ':'), indent=2))
+
         if tweet['data']['id'] not in self.ID:
           self.ID.add(tweet['data']['id'])
           if os.path.getsize(tweetFileName) > self.maxTweetFileSize:
             print(json.dumps(tweet, separators=(',', ':'), indent=2))
-            tweetFile.write(json.dumps(tweet, separators=(',', ':')))
+            tweetFile.write(json.dumps(tweet, separators=(',', ':'), indent=2))
 
             tweetFile.write(']')
             tweetFile.close()
@@ -100,7 +110,7 @@ class TweetApiRetriever(object):
 
         if self.totalTweetFileSize < self.maxTweetFileSize:
           print(json.dumps(tweet, separators=(',', ':'), indent=2))
-          tweetFile.write(json.dumps(tweet, separators=(',', ':')))
+          tweetFile.write(json.dumps(tweet, separators=(',', ':'), indent=2))
           tweetFile.write(']')
           tweetFile.close()
           print('\nDone!')
@@ -108,7 +118,7 @@ class TweetApiRetriever(object):
 
         # if we're not at the end of the tweet file, and were not done retrieving tweets, write the tweet to the file with a comma after it
         print(json.dumps(tweet, separators=(',', ':'), indent=2))
-        tweetFile.write(json.dumps(tweet, separators=(',', ':')))
+        tweetFile.write(json.dumps(tweet, separators=(',', ':'), indent=2))
         tweetFile.write(',')
 
     except Exception as e:
