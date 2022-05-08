@@ -2,6 +2,9 @@ import scrapy
 import ijson
 import os
 import sys
+import urllib3
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
 
 class TweetURLSpider(scrapy.Spider):
   name = 'tweeturlspider'
@@ -38,6 +41,10 @@ class TweetReader(object):
             # check if the tweet contains a URL
             if 'entities' in user and 'url' in user['entities']:
               print(user['id'], user['entities']['url']['urls'][0]['expanded_url'])
+              # get the url from the json and get the title of the url 
+              url = user['entities']['url']['urls'][0]['expanded_url']
+              soup = BeautifulSoup(urlopen(url))
+              print(soup.title.string)
 
 if __name__ == '__main__':
   numFiles = int(input('Enter the number of JSON files that have tweets within them (only in the tweets folder, they should have the format tweets_1.json, tweets_2.json, etc.): '))
