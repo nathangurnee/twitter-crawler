@@ -23,7 +23,7 @@ def getAccessToken(encodedTokenSecret):
   return accessTokenResponse.json()['access_token']
 
 # get the tweets using the api key
-def streamTweets(accessToken):
+def streamTweets(accessToken,filename,filesize):
   headers = {
     'Authorization': 'Bearer {}'.format(accessToken)
   }
@@ -36,14 +36,23 @@ def streamTweets(accessToken):
   print(tweetsResponse.status_code)
 
   for tweetInfo in tweetsResponse.iter_lines():
-    tweet = json.loads(tweetInfo)
-    print(json.dumps(tweet, indent=2))
+    try:
+      tweet = json.loads(tweetInfo)
+      print(json.dumps(tweet, indent=2),file=filename)
+      if filename.tell() > filesize: # ensure file caps around 10 Mb
+        return
+    except ValueError:
+      return
 
 if __name__ == '__main__':
+  max_file_size = 10000000 # 10 Mb
+  tweets_file_path = 'tweets/tweets2.txt' # file to hold tweets
+
   with open('config.json') as json_data_file:
     config = json.load(json_data_file)
 
     encodedTokenSecret = getEncodedTokenSecret(config['consumerToken'], config['consumerSecret'])
     accessToken = getAccessToken(encodedTokenSecret)
 
-    streamTweets(accessToken)
+    with open(tweets_file_path,'a') as tweets:
+      streamTweets(accessToken,tweets,max_file_size)
