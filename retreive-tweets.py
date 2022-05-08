@@ -7,6 +7,7 @@ import sys
 class TweetApiRetriever(object):
   def __init__(self, consumerToken, consumerSecret):
     # set the consumer token and secret
+    self.ID = set()
     self.consumerToken = consumerToken
     self.consumerSecret = consumerSecret
 
@@ -57,8 +58,35 @@ class TweetApiRetriever(object):
     }
 
     try:
+      getResponse = requests.get(
+        "https://api.twitter.com/2/tweets/search/stream/rules",
+        headers=headers
+      )
+      if 'data' in getResponse.text:
+        ids = [i['id'] for i in (json.loads(getResponse.text))['data']]
+        # delete rules if any exist
+        deleteResponse = requests.post(
+          "https://api.twitter.com/2/tweets/search/stream/rules",
+          headers=headers,
+          json={
+            "delete": {
+              "ids": ids
+            }
+          }
+        )
+
+      postResponse = requests.post(
+        'https://api.twitter.com/2/tweets/search/stream/rules',
+        headers=headers,
+        json={
+          "add": [
+            { "value": "new york has:links" }
+          ]
+        }
+      )
+
       tweetsResponse = requests.get(
-        'https://api.twitter.com/2/tweets/sample/stream?tweet.fields=created_at&expansions=author_id&user.fields=created_at',
+        'https://api.twitter.com/2/tweets/search/stream?tweet.fields=created_at&expansions=author_id&user.fields=created_at,entities',
         headers=headers,
         stream=True
       )
