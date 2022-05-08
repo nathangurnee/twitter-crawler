@@ -107,14 +107,16 @@ class TweetApiRetriever(object):
             tweetFileName ='tweets/tweets_{}.json'.format(self.tweetFileCount)
             tweetFile = open(tweetFileName, 'w')
             tweetFile.write('[')
-
-        if self.totalTweetFileSize < self.maxTweetFileSize:
-          print(json.dumps(tweet, separators=(',', ':'), indent=2))
-          tweetFile.write(json.dumps(tweet, separators=(',', ':'), indent=2))
-          tweetFile.write(']')
-          tweetFile.close()
-          print('\nDone!')
-          sys.exit(1)
+            
+        if tweet['data']['id'] not in self.ID:
+          self.ID.add(tweet['data']['id'])
+          if self.totalTweetFileSize < self.maxTweetFileSize:
+            print(json.dumps(tweet, separators=(',', ':'), indent=2))
+            tweetFile.write(json.dumps(tweet, separators=(',', ':'), indent=2))
+            tweetFile.write(']')
+            tweetFile.close()
+            print('\nDone!')
+            sys.exit(1)
 
         # if we're not at the end of the tweet file, and were not done retrieving tweets, write the tweet to the file with a comma after it
         print(json.dumps(tweet, separators=(',', ':'), indent=2))
