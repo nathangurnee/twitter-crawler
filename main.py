@@ -1,58 +1,109 @@
 import requests
 import json
 import base64
+import os
+import sys
 
-# encode the consumer token and secret in base64 format
-def getEncodedTokenSecret(consumerToken, consumerSecret):
-  consumerTokenSecret = '{}:{}'.format(consumerToken, consumerSecret)
-  encodedConsumerTokenSecret = base64.b64encode(bytes(consumerTokenSecret, 'utf-8'))
+class ScrapeWebsite(object):
+  pass
 
-  return encodedConsumerTokenSecret.decode('utf-8')
+class TweetApiRetriever(object):
+  def __init__(self, consumerToken, consumerSecret):
+    # set the consumer token and secret
+    self.consumerToken = consumerToken
+    self.consumerSecret = consumerSecret
 
-# get an access token from the base64 encoded consumer token secret
-def getAccessToken(encodedTokenSecret):
-  headers = {
-    'Authorization': 'Basic {}'.format(encodedTokenSecret)
-  }
+    self.encodedTokenSecret = None
+    self.accessToken = None
 
-  accessTokenResponse = requests.post(
-    'https://api.twitter.com/oauth2/token?grant_type=client_credentials',
-    headers=headers
-  )
+    # set the twitter file info
+    self.tweetFileCount = 0
+    self.maxTweetFileSize = 10485760 # 10 Mb
 
-  return accessTokenResponse.json()['access_token']
+  # encode the consumer token and secret in base64 format
+  def createEncodedTokenSecret(self):
+    consumerTokenSecret = '{}:{}'.format(self.consumerToken, self.consumerSecret)
+    encodedConsumerTokenSecret = base64.b64encode(bytes(consumerTokenSecret, 'utf-8'))
 
-# get the tweets using the api key
-def streamTweets(accessToken,filename,filesize):
-  headers = {
-    'Authorization': 'Bearer {}'.format(accessToken)
-  }
+    self.encodedTokenSecret = encodedConsumerTokenSecret.decode('utf-8')
 
-  tweetsResponse = requests.get(
-    'https://api.twitter.com/2/tweets/sample/stream?tweet.fields=created_at&expansions=author_id&user.fields=created_at',
-    headers=headers, stream=True
-  )
+  def getEncodedTokenSecret(self):
+    return self.encodedTokenSecret
 
-  print(tweetsResponse.status_code)
+  # get an access token from the base64 encoded consumer token secret
+  def createAccessToken(self):
+    headers = {
+      'Authorization': 'Basic {}'.format(self.getEncodedTokenSecret())
+    }
 
-  for tweetInfo in tweetsResponse.iter_lines():
+    accessTokenResponse = requests.post(
+      'https://api.twitter.com/oauth2/token?grant_type=client_credentials',
+      headers=headers
+    )
+
+    self.accessToken = accessTokenResponse.json()['access_token']
+
+  def getAccessToken(self):
+    return self.accessToken
+
+  ''' Stream tweets from the Twitter API and write them to a file '''
+
+  def streamTweets(self):
+    headers = {
+      'Authorization': 'Bearer {}'.format(self.getAccessToken())
+    }
+
     try:
-      tweet = json.loads(tweetInfo)
-      print(json.dumps(tweet, indent=2),file=filename)
-      if filename.tell() > filesize: # ensure file caps around 10 Mb
-        return
-    except ValueError:
-      return
+      tweetsResponse = requests.get(
+        'https://api.twitter.com/2/tweets/search/stream/rules',
+        headers=headers,
+        stream=True
+      )
+
+      # raise an exception if the request is not successful
+      print('Requesting tweets...\n')
+
+      if tweetsResponse.status_code != 200:
+        raise Exception('Status code is not 200')
+
+      # check if tweets directory exists, if not create it
+      if not os.path.exists('tweets'):
+        os.mkdir('tweets')
+
+      tweetFileName = 'tweets/tweets_{}.json'.format(self.tweetFileCount)
+      tweetFile = open(tweetFileName, 'w')
+      tweetFile.write('[')
+
+      # iterate through the tweets and write them to a file
+      for tweetInfo in tweetsResponse.iter_lines():
+        tweet = json.loads(tweetInfo)
+
+        print(json.dumps(tweet, separators=(',', ':'), indent=2))
+        tweetFile.write(json.dumps(tweet, separators=(',', ':'), indent=2))
+        tweetFile.write(',')
+
+        # check if the file is too large, if so close the file and create a new one
+        if os.path.getsize(tweetFileName) > self.maxTweetFileSize:
+          tweetFile.write(']')
+          tweetFile.close()
+          self.tweetFileCount += 1
+
+          tweetFileName ='tweets/tweets_{}.json'.format(self.tweetFileCount)
+          tweetFile = open(tweetFileName, 'w')
+          tweetFile.write('[')
+
+      if not tweetFile.closed:
+        tweetFile.write(']')
+        tweetFile.close()
+    except Exception as e:
+      print('Error: ', e)
+      sys.exit(0)
 
 if __name__ == '__main__':
-  max_file_size = 10000000 # 10 Mb
-  tweets_file_path = 'tweets/tweets2.txt' # file to hold tweets
-
   with open('config.json') as json_data_file:
     config = json.load(json_data_file)
 
-    encodedTokenSecret = getEncodedTokenSecret(config['consumerToken'], config['consumerSecret'])
-    accessToken = getAccessToken(encodedTokenSecret)
-
-    with open(tweets_file_path,'a') as tweets:
-      streamTweets(accessToken,tweets,max_file_size)
+    TweetApiRetriever = TweetApiRetriever(config['consumerToken'], config['consumerSecret'])
+    TweetApiRetriever.createEncodedTokenSecret()
+    TweetApiRetriever.createAccessToken()
+    TweetApiRetriever.streamTweets()
