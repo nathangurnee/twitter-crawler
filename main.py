@@ -10,6 +10,7 @@ class ScrapeWebsite(object):
 class TweetApiRetriever(object):
   def __init__(self, consumerToken, consumerSecret):
     # set the consumer token and secret
+    self.ID = set()
     self.consumerToken = consumerToken
     self.consumerSecret = consumerSecret
 
@@ -85,21 +86,27 @@ class TweetApiRetriever(object):
           continue
 
         tweet = json.loads(tweetInfo)
-
         # check if the file is too large, if so close the file and create a new one
-        if os.path.getsize(tweetFileName) > self.maxTweetFileSize:
-          print(json.dumps(tweet, separators=(',', ':'), indent=2))
-          tweetFile.write(json.dumps(tweet, separators=(',', ':'), indent=2))
 
-          tweetFile.write(']')
-          tweetFile.close()
+        #if os.path.getsize(tweetFileName) > self.maxTweetFileSize:
+        #  print(json.dumps(tweet, separators=(',', ':'), indent=2))
+        #  tweetFile.write(json.dumps(tweet, separators=(',', ':'), indent=2))
 
-          self.tweetFileCount += 1
-          self.totalTweetFileSize -= self.maxTweetFileSize
+        if tweet['data']['id'] not in self.ID:
+          self.ID.add(tweet['data']['id'])
+          if os.path.getsize(tweetFileName) > self.maxTweetFileSize:
+            print(json.dumps(tweet, separators=(',', ':'), indent=2))
+            tweetFile.write(json.dumps(tweet, separators=(',', ':'), indent=2))
 
-          tweetFileName ='tweets/tweets_{}.json'.format(self.tweetFileCount)
-          tweetFile = open(tweetFileName, 'w')
-          tweetFile.write('[')
+            tweetFile.write(']')
+            tweetFile.close()
+
+            self.tweetFileCount += 1
+            self.totalTweetFileSize -= self.maxTweetFileSize
+
+            tweetFileName ='tweets/tweets_{}.json'.format(self.tweetFileCount)
+            tweetFile = open(tweetFileName, 'w')
+            tweetFile.write('[')
 
         if self.totalTweetFileSize < self.maxTweetFileSize:
           print(json.dumps(tweet, separators=(',', ':'), indent=2))
