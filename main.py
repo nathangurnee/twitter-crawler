@@ -17,8 +17,11 @@ class TweetApiRetriever(object):
     self.accessToken = None
 
     # set the twitter file info
-    self.tweetFileCount = 0
+    self.tweetFileCount = 1
     self.maxTweetFileSize = 10485760 # 10 Mb
+
+    # combined tweet file sizes are 2 GB
+    self.totalTweetFileSize = 21474836480
 
   # encode the consumer token and secret in base64 format
   def createEncodedTokenSecret(self):
@@ -55,7 +58,7 @@ class TweetApiRetriever(object):
 
     try:
       tweetsResponse = requests.get(
-        'https://api.twitter.com/2/tweets/search/stream/rules',
+        'https://api.twitter.com/2/tweets/sample/stream?tweet.fields=created_at&expansions=author_id&user.fields=created_at',
         headers=headers,
         stream=True
       )
@@ -78,23 +81,34 @@ class TweetApiRetriever(object):
       for tweetInfo in tweetsResponse.iter_lines():
         tweet = json.loads(tweetInfo)
 
-        print(json.dumps(tweet, separators=(',', ':'), indent=2))
-        tweetFile.write(json.dumps(tweet, separators=(',', ':'), indent=2))
-        tweetFile.write(',')
-
         # check if the file is too large, if so close the file and create a new one
         if os.path.getsize(tweetFileName) > self.maxTweetFileSize:
+          print(json.dumps(tweet, separators=(',', ':'), indent=2))
+          tweetFile.write(json.dumps(tweet, separators=(',', ':')))
+
           tweetFile.write(']')
           tweetFile.close()
+
           self.tweetFileCount += 1
+          self.totalTweetFileSize -= self.maxTweetFileSize
 
           tweetFileName ='tweets/tweets_{}.json'.format(self.tweetFileCount)
           tweetFile = open(tweetFileName, 'w')
           tweetFile.write('[')
 
-      if not tweetFile.closed:
-        tweetFile.write(']')
-        tweetFile.close()
+        if self.totalTweetFileSize < self.maxTweetFileSize:
+          print(json.dumps(tweet, separators=(',', ':'), indent=2))
+          tweetFile.write(json.dumps(tweet, separators=(',', ':')))
+          tweetFile.write(']')
+          tweetFile.close()
+          print('\nDone!')
+          sys.exit(1)
+
+        # if we're not at the end of the tweet file, and were not done retrieving tweets, write the tweet to the file with a comma after it
+        print(json.dumps(tweet, separators=(',', ':'), indent=2))
+        tweetFile.write(json.dumps(tweet, separators=(',', ':')))
+        tweetFile.write(',')
+
     except Exception as e:
       print('Error: ', e)
       sys.exit(0)
