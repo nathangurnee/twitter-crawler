@@ -1,3 +1,3 @@
 #!/bin/sh
 
-python3 retreive-tweets.py
+python3 retrieve-tweets.py
