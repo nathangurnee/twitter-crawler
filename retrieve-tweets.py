@@ -15,14 +15,14 @@ class TweetApiRetriever(object):
     self.accessToken = None
 
     # set the twitter file info
-    self.tweetFileCount = 1
+    self.tweetFileCount = 18
     self.maxTweetFileSize = 10485760 # 10 Mb
 
     # combined tweet file sizes are 2 GB
     self.totalTweetFileSize = 21474836480
 
     # ids of the tweets
-    self.visitedTweetIds = set()
+    #self.visitedTweetIds = set()
 
   # encode the consumer token and secret in base64 format
   def createEncodedTokenSecret(self):
@@ -80,6 +80,24 @@ class TweetApiRetriever(object):
         headers=headers,
         json={
           "add": [
+            { "value": "marvel has:links" },
+            { "value": "marvel" },
+            { "value": "(doctor strange) has:links" },
+            { "value": "(doctor strange)" },
+            { "value": "(iron man) has:links" },
+            { "value": "(iron man)" },
+            { "value": "thor has:links" },
+            { "value": "thor" },
+            { "value": "spiderman has:links" },
+            { "value": "spiderman" },
+            { "value": "(captain america) has:links" },
+            { "value": "(captain america)" },
+            { "value": "avengers has:links" },
+            { "value": "avengers" },
+            { "value": "(scarlet witch) has:links" },
+            { "value": "(scarlet witch)" }
+          ],
+          "remove": [
             { "value": "new york has:links" }
           ]
         }
@@ -115,17 +133,17 @@ class TweetApiRetriever(object):
         tweet = json.loads(tweetInfo)
 
         # check if we already have saved this tweet and if we have, skip it
-        if tweet['data']['id'] in self.visitedTweetIds:
-          continue
+        #if tweet['data']['id'] in self.visitedTweetIds:
+        #  continue
 
         # mark the current tweet as visited
-        self.visitedTweetIds.add(tweet['data']['id'])
+        #self.visitedTweetIds.add(tweet['data']['id'])
 
         # check if the file is too large, if so close the file and create a new one
         if os.path.getsize(tweetFileName) > self.maxTweetFileSize:
-          print(json.dumps(tweet, separators=(',', ':'), indent=2))
-          tweetFile.write(json.dumps(tweet, separators=(',', ':'), indent=2))
-
+          #print(json.dumps(tweet, separators=(',', ':'), indent=2))
+          tweetFile.write(json.dumps(tweet, separators=(',', ':')))
+          tweetFile.write('\n')
           tweetFile.write(']')
           tweetFile.close()
 
@@ -137,17 +155,19 @@ class TweetApiRetriever(object):
           tweetFile.write('[')
 
         if self.totalTweetFileSize < self.maxTweetFileSize:
-          print(json.dumps(tweet, separators=(',', ':'), indent=2))
-          tweetFile.write(json.dumps(tweet, separators=(',', ':'), indent=2))
+          #print(json.dumps(tweet, separators=(',', ':'), indent=2))
+          tweetFile.write(json.dumps(tweet, separators=(',', ':')))
           tweetFile.write(']')
+          tweetFile.write('\n')
           tweetFile.close()
           print('\nDone!')
           sys.exit(1)
 
         # if we're not at the end of the tweet file, and were not done retrieving tweets, write the tweet to the file with a comma after it
-        print(json.dumps(tweet, separators=(',', ':'), indent=2))
-        tweetFile.write(json.dumps(tweet, separators=(',', ':'), indent=2))
+        #print(json.dumps(tweet, separators=(',', ':'), indent=2))
+        tweetFile.write(json.dumps(tweet, separators=(',', ':')))
         tweetFile.write(',')
+        tweetFile.write('\n')
 
     except Exception as e:
       print('Error: ', e)
